@@ -30,16 +30,14 @@ fn main() {
         exit(0)
     }
     
-    let mut ignores = vec![];
+    let ignores: Vec<String>;
     {
         let mut contents = String::from("");
         let gitignore = File::open(".gitignore");
         if gitignore.is_ok() {
             let _ = gitignore.unwrap().read_to_string(&mut contents);
         }
-        for line in contents.split('\n') {
-            ignores.push(line.trim().to_owned())
-        }
+        ignores = contents.split('\n').map(|l| l.trim().to_owned()).collect();
     }
 
     let gitignore = File::options().append(true).create(true).open(".gitignore");
@@ -52,6 +50,7 @@ fn main() {
     };
 
     for arg in env::args().skip(1) {
+        let arg = arg.trim().to_owned();
         if ignores.contains(&arg) {
             continue;
         }
