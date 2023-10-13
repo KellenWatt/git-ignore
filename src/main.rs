@@ -13,6 +13,8 @@ fn main() {
         }
     };
     
+    let cwd = dir.clone();
+    
     let mut git_dir = dir;
     while !git_dir.join(".git").is_dir() {
         let parent = match git_dir.parent() {
@@ -50,7 +52,13 @@ fn main() {
     };
 
     for arg in env::args().skip(1) {
-        let arg = arg.trim().to_owned();
+        let mut arg = arg.trim().to_owned();
+        if cwd.join(&arg).exists() {
+            arg = cwd.join(arg)
+                     .to_str().expect("only intended to work on UTF-8 compliant OS")
+                     .trim_start_matches(git_dir.to_str().unwrap())
+                     .to_string();
+        }
         if ignores.contains(&arg) {
             continue;
         }
