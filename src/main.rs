@@ -4,6 +4,15 @@ use std::env;
 use std::process::exit;
 use std::io::{Read,Write};
 
+fn get_ignores() -> Vec<String> {
+    let mut contents = String::from("");
+    let gitignore = File::open(".gitignore");
+    if gitignore.is_ok() {
+        let _ = gitignore.unwrap().read_to_string(&mut contents);
+    }
+    contents.split('\n').map(|l| l.trim().to_owned()).collect()
+}
+
 fn main() {
     let dir = match env::current_dir() {
         Ok(p) => p,
@@ -27,21 +36,18 @@ fn main() {
         env::set_current_dir(parent).expect("parent path operation should always succeed here");
         git_dir = parent.to_path_buf();
     }
-    
-    if env::args().len() == 1 {
-        exit(0)
-    }
-    
-    let ignores: Vec<String>;
-    {
-        let mut contents = String::from("");
-        let gitignore = File::open(".gitignore");
-        if gitignore.is_ok() {
-            let _ = gitignore.unwrap().read_to_string(&mut contents);
-        }
-        ignores = contents.split('\n').map(|l| l.trim().to_owned()).collect();
-    }
+   
+    let ignores = get_ignores();
 
+    if env::args().len() == 1 {
+        for pat in ignores.iter() {
+            if !pat.trim().is_empty() {
+                println!("{}", pat);
+            }
+        }
+        exit(0);
+    }
+    
     let gitignore = File::options().append(true).create(true).open(".gitignore");
     let mut gitignore = match gitignore {
         Ok(f) => f,
@@ -55,6 +61,7 @@ fn main() {
         let mut arg = arg.trim().to_owned();
         if cwd.join(&arg).exists() {
             arg = cwd.join(arg)
+                     .canonicalize().unwrap()
                      .to_str().expect("only intended to work on UTF-8 compliant OS")
                      .trim_start_matches(git_dir.to_str().unwrap())
                      .to_string();
